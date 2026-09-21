@@ -105,13 +105,13 @@ CellDomain
 
 ## Aceite
 
-- [ ] MRV escolhe corretamente a menor quantidade de candidatos.
-- [ ] Célula com domínio zero não é tratada como escolha normal; o estado deve ser podado.
-- [ ] Degree só é usado em empate de MRV.
-- [ ] Vizinhos duplicados não são contados duas vezes.
-- [ ] Células preenchidas não contam como vizinhos ativos.
-- [ ] Empate final é determinístico por coordenadas.
-- [ ] A função não modifica o estado.
+- [x] MRV escolhe corretamente a menor quantidade de candidatos.
+- [x] Célula com domínio zero não é tratada como escolha normal; o estado deve ser podado.
+- [x] Degree só é usado em empate de MRV.
+- [x] Vizinhos duplicados não são contados duas vezes.
+- [x] Células preenchidas não contam como vizinhos ativos.
+- [x] Empate final é determinístico por coordenadas.
+- [x] A função não modifica o estado.
 
 <details>
 <summary>Dica 1 — MRV primeiro, Degree depois</summary>
@@ -204,13 +204,13 @@ Se dois candidatos tiverem o mesmo impacto, usar valor numérico crescente.
 
 ## Aceite
 
-- [ ] Todos os candidatos legais são avaliados.
-- [ ] Impacto é calculado apenas sobre vizinhos relevantes.
-- [ ] Domínios anteriores e posteriores são comparados corretamente.
-- [ ] Candidato que gera contradição imediata é identificado.
-- [ ] Menor impacto vem primeiro.
-- [ ] Empate é resolvido por valor crescente.
-- [ ] A simulação não modifica o estado original.
+- [x] Todos os candidatos legais são avaliados.
+- [x] Impacto é calculado apenas sobre vizinhos relevantes.
+- [x] Domínios anteriores e posteriores são comparados corretamente.
+- [x] Candidato que gera contradição imediata é identificado.
+- [x] Menor impacto vem primeiro.
+- [x] Empate é resolvido por valor crescente.
+- [x] A simulação não modifica o estado original.
 
 <details>
 <summary>Dica 1 — O LCV não escolhe a célula</summary>
@@ -313,13 +313,13 @@ HeuristicEvaluation
 
 ## Aceite
 
-- [ ] `E(s)` é contado corretamente.
-- [ ] `U(s)` segue a definição comum.
-- [ ] `m(s)` é calculado corretamente.
-- [ ] Estado objetivo recebe valores coerentes.
-- [ ] Estado com domínio zero é marcado inconsistente.
-- [ ] Dois estados conhecidos podem ser comparados manualmente e o resultado bate.
-- [ ] A função não usa `g(n)` nem custo acumulado, pois o algoritmo é GBFS, não A*.
+- [x] `E(s)` é contado corretamente.
+- [x] `U(s)` segue a definição comum.
+- [x] `m(s)` é calculado corretamente.
+- [x] Estado objetivo recebe valores coerentes.
+- [x] Estado com domínio zero é marcado inconsistente.
+- [x] Dois estados conhecidos podem ser comparados manualmente e o resultado bate.
+- [x] A função não usa `g(n)` nem custo acumulado, pois o algoritmo é GBFS, não A\*.
 
 <details>
 <summary>Dica 1 — Separe os componentes da nota</summary>
@@ -407,12 +407,12 @@ Uma heap é mais eficiente e didaticamente interessante, mas uma lista pode ser 
 
 ## Aceite
 
-- [ ] O menor `h` sempre sai primeiro.
-- [ ] Empates seguem os critérios definidos.
-- [ ] `insertionOrder` garante estabilidade final.
-- [ ] É possível consultar o tamanho atual da fronteira.
-- [ ] `maxFrontier` pode ser atualizado pela busca.
-- [ ] A estrutura não altera os estados armazenados.
+- [x] O menor `h` sempre sai primeiro.
+- [x] Empates seguem os critérios definidos.
+- [x] `insertionOrder` garante estabilidade final.
+- [x] É possível consultar o tamanho atual da fronteira.
+- [x] `maxFrontier` pode ser atualizado pela busca.
+- [x] A estrutura não altera os estados armazenados.
 
 <details>
 <summary>Dica 1 — Teste a fila isoladamente</summary>
@@ -495,20 +495,20 @@ Não é obrigatório se os testes mostrarem que não há geração duplicada rel
 
 ## Importante sobre “greedy”
 
-O GBFS escolhe o próximo estado apenas com base em `h(state)` e seus desempates. Ele não soma profundidade/custo ao score como em A*.
+O GBFS escolhe o próximo estado apenas com base em `h(state)` e seus desempates. Ele não soma profundidade/custo ao score como em A\*.
 
 ## Aceite
 
-- [ ] Estado inicial entra na fronteira com `h` calculado.
-- [ ] Sempre é retirado o nó prioritário.
-- [ ] Cada expansão usa MRV + Degree.
-- [ ] Valores são ordenados por LCV.
-- [ ] Filhos inconsistentes são podados.
-- [ ] Filhos consistentes recebem `h` e entram na fronteira.
-- [ ] Estado objetivo encerra a busca.
-- [ ] Fronteira vazia retorna `unsolvable`.
-- [ ] Estado inicial não é modificado.
-- [ ] O algoritmo não se comporta como DFS disfarçada.
+- [x] Estado inicial entra na fronteira com `h` calculado.
+- [x] Sempre é retirado o nó prioritário.
+- [x] Cada expansão usa MRV + Degree.
+- [x] Valores são ordenados por LCV.
+- [x] Filhos inconsistentes são podados.
+- [x] Filhos consistentes recebem `h` e entram na fronteira.
+- [x] Estado objetivo encerra a busca.
+- [x] Fronteira vazia retorna `unsolvable`.
+- [x] Estado inicial não é modificado.
+- [x] O algoritmo não se comporta como DFS disfarçada.
 
 <details>
 <summary>Dica 1 — Observe a diferença para DFS</summary>
@@ -616,13 +616,32 @@ backtracks = 0 ou não aplicável
 
 ## Aceite
 
-- [ ] Eventos permitem visualizar MRV, Degree e LCV.
-- [ ] `NODE_EXPANDED` permite restaurar o estado correto.
-- [ ] `maxFrontier` representa o maior tamanho real da fila.
-- [ ] `heuristicEvaluations` é incrementado de forma consistente.
-- [ ] Tempo mede busca, não reprodução dos eventos.
-- [ ] Há modo silencioso para benchmark.
-- [ ] Resultado segue exatamente `SolverResult`.
+- [x] Eventos permitem visualizar MRV, Degree e LCV.
+- [x] `NODE_EXPANDED` permite restaurar o estado correto.
+- [x] `maxFrontier` representa o maior tamanho real da fila.
+- [x] `heuristicEvaluations` é incrementado de forma consistente.
+- [x] Tempo mede busca, não reprodução dos eventos.
+- [x] Há modo silencioso para benchmark.
+- [x] Resultado segue exatamente `SolverResult`.
+
+## Implementação adotada no P2-06
+
+O `GBFS.resolver(estadoInicial, opcoes)` retorna um `ResultadoResolucao` real. O modo normal registra os eventos e o modo `{ silencioso: true }` executa a mesma busca e coleta as mesmas métricas sem acumular eventos.
+
+Os snapshots dos eventos reais são matrizes `9x9` simples. Isso evita que a interface precise conhecer a classe `SudokuEstado` e permite serializar diretamente o resultado em JSON quando a integração HTTP for criada.
+
+Os eventos `CELL_SELECTED` e `CANDIDATES_COMPUTED` usam o campo opcional `metadados` para transportar, quando aplicável:
+
+```text
+mrv
+grau
+avaliacoesLCV
+impactoLCV
+menorDominio
+incerteza
+```
+
+A animação não ocorre dentro do GBFS. O solver termina primeiro, mede apenas o tempo da busca e entrega a lista de eventos pronta para o player da Pessoa 3.
 
 <details>
 <summary>Dica 1 — Separe evento de geração e expansão</summary>
@@ -719,13 +738,13 @@ Demonstrar isoladamente que cada heurística funciona e que o GBFS realmente usa
 
 ## Aceite final P2-DONE
 
-- [ ] Todas as heurísticas passam testes isolados.
-- [ ] O GBFS usa `h(state)` para prioridade global.
-- [ ] MRV + Degree + LCV são usados na expansão local.
-- [ ] `SolverResult` segue BASE-V1.
-- [ ] Eventos reais podem substituir os mocks da Pessoa 3.
-- [ ] A Pessoa 3 consegue iniciar o GBFS pela mesma interface de solver usada pela DFS.
-- [ ] Um exemplo de integração está documentado.
+- [x] Todas as heurísticas passam testes isolados.
+- [x] O GBFS usa `h(state)` para prioridade global.
+- [x] MRV + Degree + LCV são usados na expansão local.
+- [x] `SolverResult` segue BASE-V1.
+- [x] Eventos reais podem substituir os mocks da Pessoa 3.
+- [x] A Pessoa 3 consegue iniciar o GBFS pela mesma interface de solver usada pela DFS.
+- [x] Um exemplo de integração está documentado.
 
 <details>
 <summary>Dica 1 — Teste as heurísticas antes do solver completo</summary>
@@ -760,6 +779,86 @@ assert eventos NODE_EXPANDED possuem snapshots válidos
 
 ---
 
+# Integração acordada com a Pessoa 3
+
+O GBFS não conhece Express, HTML, DOM ou `fetch`. Sua entrada e saída ficam restritas ao domínio:
+
+```text
+SudokuEstado
+    |
+    v
+GBFS.resolver(estado, opcoes)
+    |
+    v
+ResultadoResolucao
+```
+
+A integração HTTP pertence à camada da Pessoa 3. Uma rota Express pode receber a matriz e o algoritmo, executar primeiro o validador de alto nível da Pessoa 1 e somente então chamar o solver selecionado.
+
+Exemplo conceitual da rota futura:
+
+```text
+POST /api/resolver
+body: { algoritmo: "GBFS", quadro: matriz9x9 }
+
+1. validar quadro
+2. se inválido ou insolúvel -> responder ValidationResult
+3. criar SudokuEstado com uma cópia do quadro
+4. chamar GBFS.resolver(estado)
+5. responder JSON com ResultadoResolucao
+```
+
+No navegador, o controlador da Pessoa 3 recebe o resultado completo. A busca já terminou nesse momento. A interface guarda `metricas`, entrega `eventos` ao player e reproduz os eventos por `sequencia`, sem fazer novas requisições durante a animação.
+
+Fluxo esperado:
+
+```text
+Usuário / gerador
+      |
+      v
+matriz 9x9 na interface
+      |
+      v
+POST /api/resolver
+      |
+      v
+validação completa (Pessoa 1)
+      |
+      +--> inválido/insolúvel -> resposta de validação -> UI mostra erro
+      |
+      v
+solver escolhido (DFS ou GBFS)
+      |
+      v
+ResultadoResolucao
+  - status
+  - solucao
+  - metricas
+  - eventos
+  - caminhoDeSolucao
+      |
+      v
+JSON para o navegador
+      |
+      +--> painel recebe métricas
+      +--> player recebe eventos
+      +--> solução final fica disponível
+```
+
+Para benchmark, a mesma rota/controlador pode chamar `GBFS.resolver(estado, { silencioso: true })`; nesse modo `eventos` fica vazio, mas as métricas continuam sendo calculadas.
+
+Essa seção documenta o contrato de integração. A criação concreta das rotas Express e do player continua pertencendo à trilha da Pessoa 3.
+
+## Validação executada no P2-07
+
+A trilha da Pessoa 2 possui testes isolados para MRV + Degree, LCV, `h(state)`, fronteira ordenada e GBFS completo. Também são testados resultado solucionável, resultado `unsolvable`, preservação do estado inicial, snapshots, eventos em sequência, métricas e modo silencioso.
+
+O teste de fronteira inclui um Sudoku pequeno com ramificação em que existem dois estados simultaneamente aguardando expansão e confirma que o GBFS pode retirar um estado diferente do último filho gerado.
+
+Com os testes da base e da Pessoa 2 executados juntos, o marco **P2-DONE** fica liberado.
+
+---
+
 # 2. O que a Pessoa 2 deve saber explicar na apresentação
 
 Ao terminar sua trilha, esta pessoa deve conseguir explicar sem ler código:
@@ -769,6 +868,6 @@ Ao terminar sua trilha, esta pessoa deve conseguir explicar sem ler código:
 3. por que Degree só entra em empate;
 4. o que o LCV tenta preservar;
 5. como `h(state)` é calculada e por que menor score recebe prioridade;
-6. diferença entre GBFS e A*;
+6. diferença entre GBFS e A\*;
 7. por que uma fila de prioridade é necessária;
 8. por que o próximo estado do GBFS pode não ser o filho do estado anteriormente mostrado.

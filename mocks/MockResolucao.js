@@ -53,13 +53,13 @@ export default class MockResolucao {
         const solucao = SudokuEstado.gerarDeMatriz(quadroSolucao);
 
         return [
-            new EventoBusca(1, "DFS", "SEARCH_STARTED", inicial, null, null, [], null, 1, 0, null),
-            new EventoBusca(2, "DFS", "CELL_SELECTED", inicial, { linha: 0, coluna: 2 }, null, [1, 2, 4], null, 1, 0, null),
-            new EventoBusca(3, "DFS", "VALUE_TRIED", tentativa, { linha: 0, coluna: 2 }, 1, [1, 2, 4], null, 1, 1, null),
-            new EventoBusca(4, "DFS", "BACKTRACK", inicial, { linha: 0, coluna: 2 }, 1, [1, 2, 4], null, 1, 0, "MOCK_SUBARVORE_SEM_SOLUCAO"),
-            new EventoBusca(5, "DFS", "VALUE_TRIED", tentativaCorreta, { linha: 0, coluna: 2 }, 4, [1, 2, 4], null, 1, 1, null),
-            new EventoBusca(6, "DFS", "SOLUTION_FOUND", solucao, null, null, [], null, 1, 51, null),
-            new EventoBusca(7, "DFS", "SEARCH_FINISHED", solucao, null, null, [], null, 0, 51, null),
+            new EventoBusca(1, "DFS", "SEARCH_STARTED", inicial.quadro.map((linha) => [...linha]), null, null, [], null, 1, 0, null),
+            new EventoBusca(2, "DFS", "CELL_SELECTED", inicial.quadro.map((linha) => [...linha]), { linha: 0, coluna: 2 }, null, [1, 2, 4], null, 1, 0, null),
+            new EventoBusca(3, "DFS", "VALUE_TRIED", tentativa.quadro.map((linha) => [...linha]), { linha: 0, coluna: 2 }, 1, [1, 2, 4], null, 1, 1, null),
+            new EventoBusca(4, "DFS", "BACKTRACK", inicial.quadro.map((linha) => [...linha]), { linha: 0, coluna: 2 }, 1, [1, 2, 4], null, 1, 0, "MOCK_SUBARVORE_SEM_SOLUCAO"),
+            new EventoBusca(5, "DFS", "VALUE_TRIED", tentativaCorreta.quadro.map((linha) => [...linha]), { linha: 0, coluna: 2 }, 4, [1, 2, 4], null, 1, 1, null),
+            new EventoBusca(6, "DFS", "SOLUTION_FOUND", solucao.quadro.map((linha) => [...linha]), null, null, [], null, 1, 51, null),
+            new EventoBusca(7, "DFS", "SEARCH_FINISHED", solucao.quadro.map((linha) => [...linha]), null, null, [], null, 0, 51, null),
         ];
     }
 
@@ -70,12 +70,12 @@ export default class MockResolucao {
         const solucao = SudokuEstado.gerarDeMatriz(quadroSolucao);
 
         return [
-            new EventoBusca(1, "GBFS", "SEARCH_STARTED", inicial, null, null, [], 52.3, 1, 0, null),
-            new EventoBusca(2, "GBFS", "NODE_EXPANDED", inicial, null, null, [], 52.3, 1, 0, null),
-            new EventoBusca(3, "GBFS", "CELL_SELECTED", inicial, { linha: 6, coluna: 5 }, null, [7], 52.3, 1, 0, "MRV"),
-            new EventoBusca(4, "GBFS", "CHILD_GENERATED", filho, { linha: 6, coluna: 5 }, 7, [7], 50.1, 2, 1, null),
-            new EventoBusca(5, "GBFS", "SOLUTION_FOUND", solucao, null, null, [], 0, 1, 51, null),
-            new EventoBusca(6, "GBFS", "SEARCH_FINISHED", solucao, null, null, [], 0, 0, 51, null),
+            new EventoBusca(1, "GBFS", "SEARCH_STARTED", inicial.quadro.map((linha) => [...linha]), null, null, [], 52.3, 1, 0, null),
+            new EventoBusca(2, "GBFS", "NODE_EXPANDED", inicial.quadro.map((linha) => [...linha]), null, null, [], 52.3, 1, 0, null),
+            new EventoBusca(3, "GBFS", "CELL_SELECTED", inicial.quadro.map((linha) => [...linha]), { linha: 6, coluna: 5 }, null, [7], 52.3, 1, 0, "MRV"),
+            new EventoBusca(4, "GBFS", "CHILD_GENERATED", filho.quadro.map((linha) => [...linha]), { linha: 6, coluna: 5 }, 7, [7], 50.1, 2, 1, null),
+            new EventoBusca(5, "GBFS", "SOLUTION_FOUND", solucao.quadro.map((linha) => [...linha]), null, null, [], 0, 1, 51, null),
+            new EventoBusca(6, "GBFS", "SEARCH_FINISHED", solucao.quadro.map((linha) => [...linha]), null, null, [], 0, 0, 51, null),
         ];
     }
 
@@ -96,10 +96,10 @@ export default class MockResolucao {
         const inicial = SudokuEstado.gerarDeMatriz(quadroInicial);
 
         return [
-            new EventoBusca(1, algoritmo, "SEARCH_STARTED", inicial, null, null, [], null, 1, 0, null),
-            new EventoBusca(2, algoritmo, "NODE_EXPANDED", inicial, null, null, [], algoritmo === "GBFS" ? 52.3 : null, 1, 0, null),
-            new EventoBusca(3, algoritmo, "STATE_PRUNED", inicial, null, null, [], algoritmo === "GBFS" ? 52.3 : null, 0, 0, "MOCK_SEM_CONTINUACAO"),
-            new EventoBusca(4, algoritmo, "SEARCH_FINISHED", inicial, null, null, [], null, 0, 0, "MOCK_UNSOLVABLE"),
+            new EventoBusca(1, algoritmo, "SEARCH_STARTED", inicial.quadro.map((linha) => [...linha]), null, null, [], null, 1, 0, null),
+            new EventoBusca(2, algoritmo, "NODE_EXPANDED", inicial.quadro.map((linha) => [...linha]), null, null, [], algoritmo === "GBFS" ? 52.3 : null, 1, 0, null),
+            new EventoBusca(3, algoritmo, "STATE_PRUNED", inicial.quadro.map((linha) => [...linha]), null, null, [], algoritmo === "GBFS" ? 52.3 : null, 0, 0, "MOCK_SEM_CONTINUACAO"),
+            new EventoBusca(4, algoritmo, "SEARCH_FINISHED", inicial.quadro.map((linha) => [...linha]), null, null, [], null, 0, 0, "MOCK_UNSOLVABLE"),
         ];
     }
 

@@ -11,6 +11,7 @@ export default class EventoBusca {
         tamanhoFronteira = 0,
         profundidade = 0,
         razao = null,
+        metadados = null,
     ) {
         this.sequencia = sequencia;
         this.algoritmo = algoritmo;
@@ -23,5 +24,6 @@ export default class EventoBusca {
         this.tamanhoFronteira = tamanhoFronteira;
         this.profundidade = profundidade;
         this.razao = razao;
+        this.metadados = metadados;
     }
 }

@@ -1,0 +1,61 @@
+NAVEGADOR
+   |
+   | usuário digita/gera Sudoku
+   | escolhe DFS ou GBFS
+   | clica Resolver
+   v
+Frontend lê matriz 9x9
+   |
+   | POST /api/resolver
+   | {
+   |   algoritmo: "GBFS",
+   |   quadro: [...]
+   | }
+   v
+EXPRESS / NODE
+   |
+   v
+Validação completa - Pessoa 1
+   |
+   +---- inválido ----------> resposta com erro de validação
+   |
+   +---- insolúvel ---------> resposta informando insolubilidade
+   |
+   v
+Sudoku válido e solucionável
+   |
+   v
+Seleciona resolvedor
+   |
+   +---- DFS.resolver(...)
+   |
+   +---- GBFS.resolver(...)
+              |
+              v
+       busca termina inteira
+              |
+              v
+       ResultadoResolucao
+       {
+           status,
+           solucao,
+           metricas,
+           eventos,
+           caminhoDeSolucao
+       }
+              |
+              v
+JSON enviado ao navegador
+              |
+       +------+------+
+       |             |
+       v             v
+   métricas       eventos[]
+                    |
+                    v
+               PLAYER DA UI
+                    |
+             evento 1
+             evento 2
+             evento 3
+               ...

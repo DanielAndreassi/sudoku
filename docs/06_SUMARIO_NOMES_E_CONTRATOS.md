@@ -171,6 +171,7 @@ Se não forem informados, `metricas`, `eventos` e `caminhoDeSolucao` já possuem
 | `frontierSize`   | `tamanhoFronteira` | Quantidade de nós aguardando busca.                  |
 | `depth`          | `profundidade`     | Profundidade do nó.                                  |
 | `reason`         | `razao`            | Motivo de poda, backtracking ou encerramento.        |
+| `metadata`       | `metadados`        | Informações extras do algoritmo, como MRV, Degree e impacto LCV. |
 
 Tipos definidos pelo contrato:
 
@@ -187,7 +188,7 @@ SOLUTION_FOUND
 SEARCH_FINISHED
 ```
 
-Nos mocks atuais, `estadoSnapshot` é uma instância de `SudokuEstado`.
+`estadoSnapshot` é uma cópia simples da matriz 9x9. Mocks e eventos reais usam o mesmo formato para que o frontend possa renderizar o snapshot diretamente e para que o resultado seja serializável em JSON.
 
 ---
 
@@ -205,30 +206,30 @@ A validação completa será desenvolvida na trilha responsável pela validaçã
 
 ---
 
-## 9. Estruturas ainda não implementadas
+## 9. Estruturas da busca implementadas após BASE-V1
 
-### SearchNode
+### SearchNode -> NoListaEstado
 
-Nos documentos aparece a estrutura conceitual `SearchNode`.
+O conceito `SearchNode` foi implementado em `models/ListaEstadosOrdenados.js` com o nome `NoListaEstado`. Ele guarda o estado, profundidade, ação, pai, avaliação heurística, quantidade de células vazias, incerteza e ordem de inserção usados pela fronteira do GBFS.
 
-Ela ainda não foi criada porque B-01 a B-06 não exigem que a busca esteja implementada. Quando for necessária, o nome em português sugerido é:
+A correspondência adotada é:
 
 ```text
-SearchNode -> NoBusca
+SearchNode -> NoListaEstado
 ```
 
-Mapeamento sugerido:
+| Conceitual            | Nome no código                    |
+| --------------------- | --------------------------------- |
+| `state`               | `estado`                          |
+| `depth`               | `profundidade`                    |
+| `parent`              | `pai`                             |
+| `action`              | `acao`                            |
+| `heuristicScore`      | `avaliacaoHeuristica`             |
+| `emptyCount`          | `qteDominiosCelulasVazias`        |
+| `uncertainty`         | `incerteza`                       |
+| `insertionOrder`      | `ordemInsercao`                   |
 
-| Conceitual            | Sugestão em português |
-| --------------------- | --------------------- |
-| `state`               | `estado`              |
-| `depth`               | `profundidade`        |
-| `parent` / `parentId` | `pai` / `idPai`       |
-| `action`              | `acao`                |
-| `heuristicScore`      | `scoreHeuristico`     |
-| `insertionOrder`      | `ordemInsercao`       |
-
-A pessoa que implementar GBFS poderá decidir se todos esses campos serão necessários.
+`NoListaEstado` é usado internamente pela `ListaEstadosOrdenados`, que representa a fronteira prioritária do GBFS.
 
 ---
 

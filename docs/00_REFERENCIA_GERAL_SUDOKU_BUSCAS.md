@@ -8,10 +8,10 @@ O projeto terá obrigatoriamente dois resolvedores:
 
 1. **Busca cega:** DFS (Depth-First Search) com backtracking.
 2. **Busca heurística:** Greedy Best-First Search (GBFS), usando:
-   - MRV para escolher a célula mais restrita;
-   - Degree Heuristic para desempatar células com o mesmo MRV;
-   - LCV para ordenar os valores candidatos;
-   - uma função de prioridade de estado para ordenar a fronteira do GBFS.
+    - MRV para escolher a célula mais restrita;
+    - Degree Heuristic para desempatar células com o mesmo MRV;
+    - LCV para ordenar os valores candidatos;
+    - uma função de prioridade de estado para ordenar a fronteira do GBFS.
 
 A interface deverá permitir entrada manual, seleção do algoritmo, visualização animada do processo, validação do estado inicial e comparação por métricas.
 
@@ -86,7 +86,7 @@ novo estado
 
 Cada preenchimento pode ser considerado custo `1`.
 
-Como o trabalho compara DFS e GBFS, esse custo não será usado para calcular uma função `g(n)` como ocorreria em A*, mas é útil para definir profundidade e quantidade de passos da solução.
+Como o trabalho compara DFS e GBFS, esse custo não será usado para calcular uma função `g(n)` como ocorreria em A\*, mas é útil para definir profundidade e quantidade de passos da solução.
 
 ---
 
@@ -213,6 +213,7 @@ SearchEvent
 - frontierSize, quando aplicável
 - depth, quando aplicável
 - reason, para explicar poda/backtracking
+- metadata, opcional para informações específicas do algoritmo
 ```
 
 Tipos úteis:
@@ -230,7 +231,7 @@ SOLUTION_FOUND
 SEARCH_FINISHED
 ```
 
-Não é necessário usar exatamente todos esses nomes. O importante é permitir que a interface explique o processo.
+Não é necessário usar exatamente todos esses nomes. O importante é permitir que a interface explique o processo. Para transporte entre backend e frontend, `stateSnapshot` deve ser uma cópia simples da matriz 9x9, sem depender de métodos da classe de estado.
 
 ### 4.6 Métricas
 
@@ -254,33 +255,33 @@ Metrics
 
 #### Definições
 
-**exploredStates**  
+**exploredStates**
 Quantidade de estados efetivamente processados/expandidos.
 
-**generatedStates**  
+**generatedStates**
 Quantidade de estados filhos válidos efetivamente criados.
 
-**candidateAttempts**  
+**candidateAttempts**
 Quantidade de valores candidatos que o algoritmo analisou/tentou durante a busca.
 
-**deadEnds**  
+**deadEnds**
 Quantidade de estados nos quais a continuação se mostrou impossível.
 
-**prunedStates**  
+**prunedStates**
 Estados descartados antes de expansão completa, por exemplo por domínio zero.
 
-**solutionDepth**  
+**solutionDepth**
 Quantidade de ações entre o estado inicial e a solução encontrada.
 
 Em Sudoku, se cada transição preencher exatamente uma célula, normalmente essa profundidade será igual ao número de células vazias iniciais. Ela ainda deve ser exibida porque faz parte das métricas solicitadas, embora não seja a métrica mais discriminativa.
 
-**maxFrontier**  
+**maxFrontier**
 Maior quantidade de nós aguardando exploração simultaneamente.
 
-**heuristicEvaluations**  
+**heuristicEvaluations**
 Quantidade de avaliações heurísticas realizadas. Para DFS pode permanecer `0`.
 
-**backtracks**  
+**backtracks**
 Quantidade de vezes que uma atribuição válida feita pelo DFS precisou ser desfeita porque o ramo não levou à solução.
 
 ---
@@ -460,15 +461,15 @@ Se dois valores tiverem o mesmo impacto, use ordem numérica crescente para mant
 
 Para um estado `s`, defina:
 
-**E(s)**  
+**E(s)**
 Número de células vazias.
 
-**m(s)**  
+**m(s)**
 Menor tamanho de domínio entre as células vazias.
 
 No estado objetivo, defina `m(s) = 0`.
 
-**U(s)**  
+**U(s)**
 Incerteza total dos domínios:
 
 ```text
@@ -497,7 +498,7 @@ A função favorece estados que:
 - possuem menor incerteza total;
 - possuem pelo menos uma célula bastante restrita.
 
-O GBFS **não precisa de heurística admissível**, diferentemente das condições normalmente discutidas para A*. Aqui a função é uma estimativa de “promessa” do estado, não uma prova de custo ótimo.
+O GBFS **não precisa de heurística admissível**, diferentemente das condições normalmente discutidas para A\*. Aqui a função é uma estimativa de “promessa” do estado, não uma prova de custo ótimo.
 
 ### 10.4 Critérios de desempate da fila
 
