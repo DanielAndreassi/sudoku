@@ -1,0 +1,599 @@
+/*
+ * Tema escuro unico, estilo "painel de dados".
+ *
+ * Duas regras que valem para o arquivo inteiro:
+ *
+ * 1. Sem transicoes e sem animacao. A animacao do player E o conteudo: a 120 ms
+ *    por evento, um fade de 200 ms borraria dois eventos consecutivos e ninguem
+ *    conseguiria dizer qual celula acabou de mudar.
+ * 2. Nenhum estado depende so de cor. Cada um combina cor com peso, contorno,
+ *    riscado ou italico, para continuar legivel para quem nao distingue
+ *    vermelho de verde.
+ */
+
+:root {
+    /* superficies */
+    --fundo: #0F172A;
+    --cartao: #1B2336;
+    --elevado: #272F42;
+    --borda: #475569;
+    --borda-fraca: #334155;
+
+    /* texto */
+    --texto: #F8FAFC;
+    --texto-fraco: #94A3B8;
+
+    /* semantica da grade */
+    --pista: #F8FAFC;
+    --busca: #38BDF8;
+    --selecionada-fundo: #1E3A8A;
+    --selecionada-borda: #60A5FA;
+    --tentativa-fundo: #78350F;
+    --tentativa-texto: #FBBF24;
+    --podada-fundo: #7F1D1D;
+    --podada-texto: #FCA5A5;
+    --erro-borda: #EF4444;
+    --solucao-fundo: #14532D;
+    --solucao-texto: #4ADE80;
+
+    /* acao */
+    --acento: #22C55E;
+    --acento-escuro: #14532D;
+    --perigo: #EF4444;
+    --alerta: #FBBF24;
+
+    /* tipografia */
+    --sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Fira Code", ui-monospace, "SF Mono", Menlo, monospace;
+
+    /* espacamento */
+    --e1: 4px;
+    --e2: 8px;
+    --e3: 12px;
+    --e4: 16px;
+    --e6: 24px;
+    --e8: 32px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font: 14px/1.5 var(--sans);
+}
+
+/* ---------------------------------------------------------- barra do topo */
+
+.barra-topo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e6);
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: var(--e4) var(--e6);
+    background: var(--cartao);
+    border-bottom: 1px solid var(--borda);
+}
+
+.marca {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.marca strong {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.marca span {
+    font-size: 12px;
+    color: var(--texto-fraco);
+}
+
+.barra-controles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e3);
+    align-items: flex-end;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--e1);
+}
+
+.campo span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+}
+
+select {
+    font: 13px var(--sans);
+    padding: 7px var(--e2);
+    background: var(--elevado);
+    color: var(--texto);
+    border: 1px solid var(--borda);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+select:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.botao {
+    font: 500 13px var(--sans);
+    padding: 8px var(--e3);
+    background: var(--elevado);
+    color: var(--texto);
+    border: 1px solid var(--borda);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.botao:hover:not(:disabled) {
+    background: var(--borda-fraca);
+    border-color: var(--texto-fraco);
+}
+
+.botao:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+.botao-primario {
+    background: var(--acento);
+    border-color: var(--acento);
+    color: #0F172A;
+    font-weight: 600;
+}
+
+.botao-primario:hover:not(:disabled) {
+    background: #16A34A;
+    border-color: #16A34A;
+}
+
+:focus-visible {
+    outline: 2px solid var(--busca);
+    outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- estrutura */
+
+.layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e8);
+    align-items: flex-start;
+    padding: var(--e6);
+}
+
+.coluna-tabuleiro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--e4);
+}
+
+.coluna-painel {
+    flex: 1;
+    min-width: 360px;
+    max-width: 560px;
+}
+
+/* --------------------------------------------------------------- tabuleiro */
+
+/*
+ * Nove blocos 3x3 separados por espaco, nao por borda grossa.
+ * No escuro, uma borda clara de 2px viraria nove caixas com contorno brilhante
+ * competindo com o conteudo; o vao deixa os blocos obvios sem desenhar nada.
+ */
+.tabuleiro {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: var(--e1);
+    width: max-content;
+    padding: var(--e2);
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+}
+
+.bloco {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+}
+
+.celula {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--borda-fraca);
+    background: var(--fundo);
+    color: var(--busca);
+    font: 20px var(--mono);
+    text-align: center;
+    border-radius: 0;
+}
+
+.celula:focus-visible {
+    outline: 2px solid var(--busca);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* --- os sete estados visuais --- */
+
+.celula.pista {
+    color: var(--pista);
+    font-weight: 600;
+}
+
+.celula.valor-busca {
+    color: var(--busca);
+    font-weight: 400;
+}
+
+.celula.selecionada {
+    background: var(--selecionada-fundo);
+    border-color: var(--selecionada-borda);
+    box-shadow: inset 0 0 0 1px var(--selecionada-borda);
+}
+
+.celula.tentativa {
+    background: var(--tentativa-fundo);
+    color: var(--tentativa-texto);
+    font-style: italic;
+}
+
+.celula.podada {
+    background: var(--podada-fundo);
+    color: var(--podada-texto);
+    text-decoration: line-through;
+}
+
+.celula.erro {
+    background: var(--podada-fundo);
+    border: 2px dashed var(--erro-borda);
+    font-weight: 600;
+}
+
+.celula.solucao {
+    background: var(--solucao-fundo);
+    color: var(--solucao-texto);
+}
+
+/* -------------------------------------------------------------- transporte */
+
+.transporte {
+    display: flex;
+    flex-direction: column;
+    gap: var(--e3);
+    max-width: 480px;
+    padding: var(--e3);
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+}
+
+.transporte-botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--e2);
+}
+
+.controle-faixa {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: var(--e3);
+    align-items: center;
+}
+
+.controle-faixa span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+}
+
+.controle-faixa input[type="range"] {
+    width: 100%;
+    accent-color: var(--busca);
+    cursor: pointer;
+}
+
+.controle-faixa output {
+    min-width: 76px;
+    font: 12px var(--mono);
+    color: var(--texto-fraco);
+    text-align: right;
+}
+
+.estado-execucao {
+    margin: 0;
+    max-width: 480px;
+    padding: var(--e2) var(--e3);
+    background: var(--cartao);
+    border-left: 3px solid var(--borda);
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+}
+
+.estado-execucao.ok { border-left-color: var(--acento); }
+.estado-execucao.trabalhando { border-left-color: var(--busca); }
+.estado-execucao.falha { border-left-color: var(--perigo); }
+
+/* ------------------------------------------------------------------- abas */
+
+.abas {
+    display: flex;
+    gap: var(--e1);
+    border-bottom: 1px solid var(--borda);
+}
+
+.aba {
+    font: 500 13px var(--sans);
+    padding: var(--e2) var(--e4);
+    background: none;
+    color: var(--texto-fraco);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+.aba:hover {
+    color: var(--texto);
+}
+
+.aba-ativa {
+    color: var(--texto);
+    border-bottom-color: var(--busca);
+}
+
+.conteudo-aba {
+    padding-top: var(--e4);
+}
+
+/* --------------------------------------------------------------- destaques */
+
+.destaques {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--e2);
+}
+
+.destaque {
+    display: flex;
+    flex-direction: column;
+    gap: var(--e1);
+    padding: var(--e3);
+    background: var(--cartao);
+    border: 1px solid var(--borda-fraca);
+    border-radius: 6px;
+}
+
+.destaque-rotulo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+}
+
+.destaque-valor {
+    font: 600 28px/1.1 var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--texto);
+}
+
+.linha-resumo {
+    margin: var(--e3) 0 0;
+    font: 12px var(--mono);
+    color: var(--texto-fraco);
+}
+
+.linha-resumo .separador {
+    color: var(--borda);
+}
+
+/* --------------------------------------------------------------- detalhes */
+
+.detalhes {
+    margin-top: var(--e3);
+    border: 1px solid var(--borda-fraca);
+    border-radius: 6px;
+    background: var(--cartao);
+}
+
+.detalhes > summary {
+    padding: var(--e2) var(--e3);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+    cursor: pointer;
+    list-style-position: inside;
+}
+
+.detalhes > summary:hover {
+    color: var(--texto);
+}
+
+.detalhes .tabela-dados {
+    border-top: 1px solid var(--borda-fraca);
+}
+
+/* ---------------------------------------------------------------- tabelas */
+
+.titulo-secao {
+    margin: var(--e6) 0 var(--e2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+}
+
+.tabela-dados,
+.tabela-comparacao {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--cartao);
+    font-size: 13px;
+}
+
+.tabela-dados th,
+.tabela-dados td,
+.tabela-comparacao th,
+.tabela-comparacao td {
+    padding: 6px var(--e3);
+    border-bottom: 1px solid var(--borda-fraca);
+    text-align: left;
+}
+
+.tabela-dados tr:last-child th,
+.tabela-dados tr:last-child td {
+    border-bottom: none;
+}
+
+.tabela-dados th,
+.tabela-comparacao tbody th {
+    font-weight: 400;
+    color: var(--texto-fraco);
+}
+
+.tabela-dados td,
+.tabela-comparacao td {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--texto);
+}
+
+.tabela-comparacao thead th {
+    font: 600 11px var(--sans);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-fraco);
+    border-bottom: 1px solid var(--borda);
+}
+
+.tabela-comparacao tr.linha-derivada th,
+.tabela-comparacao tr.linha-derivada td {
+    font-weight: 600;
+    color: var(--texto);
+    border-top: 1px solid var(--borda);
+}
+
+/*
+ * Nota curta dentro do rotulo de uma metrica comparavel.
+ *
+ * Sobrevivem aqui as notas que explicam um zero enganoso: em `backtracks` e
+ * `avaliacoesDeHeuristicas` o 0 significa "nao se aplica", nao "usou zero
+ * vezes". Sem esse texto o leitor conclui a coisa errada a partir do numero.
+ */
+.tabela-comparacao .nota-metrica {
+    display: block;
+    margin-top: 2px;
+    max-width: 28ch;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--texto-fraco);
+}
+
+/* ------------------------------------------- bloco das nao comparaveis */
+
+/*
+ * Estas metricas saem da tabela principal de proposito. Marcadas dentro dela,
+ * o olho ainda varre a linha e le os dois numeros lado a lado antes de
+ * processar o aviso. Fora da tabela, a leitura errada deixa de ser possivel.
+ */
+.bloco-incomparavel {
+    margin-top: var(--e6);
+    padding: var(--e3);
+    background: var(--cartao);
+    border: 1px solid var(--alerta);
+    border-radius: 6px;
+}
+
+.bloco-incomparavel > h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--e2);
+    margin: 0 0 var(--e2);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--alerta);
+}
+
+.bloco-incomparavel .item {
+    padding: var(--e2) 0;
+    border-top: 1px solid var(--borda-fraca);
+}
+
+.bloco-incomparavel .item-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--e3);
+    font-size: 13px;
+}
+
+.bloco-incomparavel .item-valores {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--texto);
+    white-space: nowrap;
+}
+
+.bloco-incomparavel .item-nota {
+    display: block;
+    margin-top: var(--e1);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--texto-fraco);
+}
+
+/* ------------------------------------------------------------------ notas */
+
+.nota {
+    margin: var(--e3) 0 0;
+    font-size: 12px;
+    color: var(--texto-fraco);
+}
+
+.nota:empty {
+    display: none;
+}
+
+.nota.aviso {
+    padding: var(--e2) var(--e3);
+    background: rgba(251, 191, 36, 0.1);
+    border-left: 3px solid var(--alerta);
+    color: var(--alerta);
+}
+
+.aviso-mock {
+    margin: 0 0 var(--e3);
+    padding: var(--e3);
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid var(--perigo);
+    border-radius: 6px;
+    color: #FCA5A5;
+    font-size: 13px;
+    font-weight: 500;
+}

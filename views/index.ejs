@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku como problema de busca — DFS x GBFS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+    <header class="barra-topo">
+        <div class="marca">
+            <strong>Sudoku como problema de busca</strong>
+            <span>DFS cega x GBFS heuristica</span>
+        </div>
+
+        <div class="barra-controles">
+            <label class="campo">
+                <span>Exemplo</span>
+                <select id="seletor-puzzle">
+                    <option value="">— escolher —</option>
+                    <% puzzlesFixos.forEach(function (puzzle) { %>
+                        <option value="<%= puzzle.id %>"><%= puzzle.nome %></option>
+                    <% }); %>
+                </select>
+            </label>
+
+            <label class="campo">
+                <span>Gerar</span>
+                <select id="seletor-nivel">
+                    <option value="">— nivel —</option>
+                    <option value="facil">Facil (35 vazias)</option>
+                    <option value="medio">Medio (45 vazias)</option>
+                    <option value="dificil">Dificil (55 vazias)</option>
+                </select>
+            </label>
+
+            <label class="campo">
+                <span>Algoritmo</span>
+                <select id="seletor-algoritmo">
+                    <option value="gbfs">GBFS (heuristica)</option>
+                    <option value="dfs">DFS (cega) — aguardando Pessoa 1</option>
+                </select>
+            </label>
+
+            <button type="button" id="botao-resolver" class="botao botao-primario">Resolver</button>
+            <button type="button" id="botao-limpar" class="botao">Limpar</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <section class="coluna-tabuleiro">
+            <div class="tabuleiro" id="tabuleiro">
+                <% for (let bloco = 0; bloco < 9; bloco++) { %>
+                    <% const blocoLinha = Math.floor(bloco / 3), blocoColuna = bloco % 3; %>
+                    <div class="bloco">
+                        <% for (let celula = 0; celula < 9; celula++) { %>
+                            <%
+                                const linha = blocoLinha * 3 + Math.floor(celula / 3);
+                                const coluna = blocoColuna * 3 + (celula % 3);
+                            %>
+                            <input
+                                class="celula"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="1"
+                                autocomplete="off"
+                                data-linha="<%= linha %>"
+                                data-coluna="<%= coluna %>"
+                                aria-label="linha <%= linha + 1 %>, coluna <%= coluna + 1 %>">
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+
+            <div class="transporte">
+                <div class="transporte-botoes">
+                    <button type="button" id="botao-reproduzir" class="botao" title="Reproduzir">Reproduzir</button>
+                    <button type="button" id="botao-pausar" class="botao" title="Pausar">Pausar</button>
+                    <button type="button" id="botao-passo" class="botao" title="Proximo evento">Passo</button>
+                    <button type="button" id="botao-fim" class="botao" title="Ir ao fim">Ir ao fim</button>
+                    <button type="button" id="botao-resetar" class="botao" title="Voltar ao inicio">Resetar</button>
+                    <button type="button" id="botao-solucao" class="botao" title="Mostrar solucao final">Solucao</button>
+                </div>
+
+                <label class="controle-faixa">
+                    <span>Progresso</span>
+                    <input type="range" id="controle-progresso" min="0" max="0" step="1" value="0">
+                    <output id="rotulo-progresso">0 / 0</output>
+                </label>
+
+                <label class="controle-faixa">
+                    <span>Velocidade</span>
+                    <input type="range" id="controle-velocidade" min="0" max="2000" step="10" value="120">
+                    <output id="rotulo-velocidade">120 ms</output>
+                </label>
+            </div>
+
+            <p class="estado-execucao" id="estado-execucao" role="status">Pronto.</p>
+        </section>
+
+        <aside class="coluna-painel">
+            <nav class="abas" role="tablist">
+                <button type="button" class="aba aba-ativa" data-aba="execucao" role="tab" aria-selected="true">Execucao</button>
+                <button type="button" class="aba" data-aba="comparacao" role="tab" aria-selected="false">Comparacao</button>
+            </nav>
+
+            <section class="conteudo-aba" id="painel-execucao" data-painel="execucao">
+                <div id="tabela-metricas">
+                    <div class="destaques">
+                        <div class="destaque">
+                            <span class="destaque-rotulo">Tempo da busca</span>
+                            <span class="destaque-valor" data-metrica="tempo">—</span>
+                        </div>
+                        <div class="destaque">
+                            <span class="destaque-rotulo">Estados explorados</span>
+                            <span class="destaque-valor" data-metrica="estadosExplorados">—</span>
+                        </div>
+                        <div class="destaque">
+                            <span class="destaque-rotulo">Estados gerados</span>
+                            <span class="destaque-valor" data-metrica="estadosGerados">—</span>
+                        </div>
+                        <div class="destaque">
+                            <span class="destaque-rotulo">Estados descartados</span>
+                            <span class="destaque-valor" data-metrica="estadosDescartados">—</span>
+                        </div>
+                    </div>
+
+                    <p class="linha-resumo">
+                        <span data-metrica="algoritmo">—</span>
+                        <span class="separador">·</span>
+                        <span data-metrica="status">—</span>
+                        <span class="separador">·</span>
+                        <span data-metrica="eventos">—</span> eventos
+                    </p>
+
+                    <details class="detalhes">
+                        <summary>Demais metricas</summary>
+                        <table class="tabela-dados">
+                            <tbody>
+                                <tr><th>Tentativas de candidatos</th><td data-metrica="tentativasCandidatas">—</td></tr>
+                                <tr><th>Estados mortos</th><td data-metrica="estadosMortos">—</td></tr>
+                                <tr><th>Estados podados</th><td data-metrica="estadosPodados">—</td></tr>
+                                <tr><th>Profundidade da solucao</th><td data-metrica="profundidadeDaSolucao">—</td></tr>
+                                <tr><th>Fronteira maxima</th><td data-metrica="fronteiraMaxima">—</td></tr>
+                                <tr><th>Avaliacoes heuristicas</th><td data-metrica="avaliacoesDeHeuristicas">—</td></tr>
+                                <tr><th>Backtracks</th><td data-metrica="backtracks">—</td></tr>
+                            </tbody>
+                        </table>
+                    </details>
+                </div>
+
+                <h2 class="titulo-secao">O que a busca esta fazendo</h2>
+                <table class="tabela-dados tabela-explicacao">
+                    <tbody>
+                        <tr data-campo-explicacao="tipo"><th>Evento</th><td data-explicacao="tipo">—</td></tr>
+                        <tr data-campo-explicacao="algoritmo"><th>Algoritmo</th><td data-explicacao="algoritmo">—</td></tr>
+                        <tr data-campo-explicacao="celula"><th>Celula</th><td data-explicacao="celula">—</td></tr>
+                        <tr data-campo-explicacao="candidatos"><th>Candidatos</th><td data-explicacao="candidatos">—</td></tr>
+                        <tr data-campo-explicacao="valor"><th>Valor tentado</th><td data-explicacao="valor">—</td></tr>
+                        <tr data-campo-explicacao="profundidade"><th>Profundidade</th><td data-explicacao="profundidade">—</td></tr>
+                        <tr data-campo-explicacao="tamanhoFronteira"><th>Fronteira</th><td data-explicacao="tamanhoFronteira">—</td></tr>
+                        <tr data-campo-explicacao="mrv"><th>MRV</th><td data-explicacao="mrv">—</td></tr>
+                        <tr data-campo-explicacao="grau"><th>Degree</th><td data-explicacao="grau">—</td></tr>
+                        <tr data-campo-explicacao="lcv"><th>Ordem LCV</th><td data-explicacao="lcv">—</td></tr>
+                        <tr data-campo-explicacao="scoreHeuristico"><th>h(estado)</th><td data-explicacao="scoreHeuristico">—</td></tr>
+                        <tr data-campo-explicacao="razao"><th>Razao</th><td data-explicacao="razao">—</td></tr>
+                    </tbody>
+                </table>
+
+                <p class="nota" id="nota-validacao"></p>
+            </section>
+
+            <section class="conteudo-aba" id="painel-comparacao" data-painel="comparacao" hidden>
+                <div id="aviso-comparacao"></div>
+                <div id="tabela-comparacao"></div>
+                <div id="comparacao-nao-comparavel"></div>
+            </section>
+        </aside>
+    </main>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+
+</html>
