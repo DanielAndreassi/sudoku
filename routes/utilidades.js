@@ -2,9 +2,9 @@ import { Router } from "express";
 
 import GeradorSudoku from "../models/GeradorSudoku.js";
 import SudokuEstado from "../models/SudokuEstado.js";
+import DFS from "../resolvers/DFS.js";
 import GBFS from "../resolvers/GBFS.js";
 import Benchmark from "../servicos/Benchmark.js";
-import MockResolucao from "../mocks/MockResolucao.js";
 import { listarPuzzlesFixos } from "../servicos/PuzzlesFixos.js";
 
 const rotas = Router();
@@ -38,10 +38,11 @@ rotas.get("/gerar", (requisicao, resposta) => {
  * relatorio. Esta rota existe para demonstrar na tela e compartilha exatamente o
  * mesmo motor (`servicos/Benchmark.js`), entao nao ha risco de divergirem.
  *
- * ATENCAO: a DFS ainda nao existe (Pessoa 1 nao entregou P1-01/P1-02). No lugar
- * dela vai `MockResolucao`, cujas metricas carregam `ehMock: true`. O motor
- * propaga essa marca e o cliente precisa exibi-la. Numero ficticio em tabela de
- * benchmark e exatamente o que acaba copiado para o relatorio sem conferencia.
+ * Os dois solvers sao reais eucusam o mesmo contrato. A DFS e cega e densa:
+ * roda silenciosa aqui, senao a construcao dos milhares de snapshots que a
+ * animacao precisa custa mais que a propria busca. O aviso de `ehMock`
+ * continua no motor porque ele nao distingue quem preencheu a metrica; com a DFS
+ * real ele simplesmente nunca aparece.
  */
 rotas.post("/benchmark", (requisicao, resposta) => {
     const { puzzles: idsPedidos, repeticoes = 3, algoritmos = ["gbfs", "dfs"] } = requisicao.body ?? {};
@@ -62,8 +63,9 @@ rotas.post("/benchmark", (requisicao, resposta) => {
 
     const todosSolvers = {
         gbfs: (estado, opcoes) => GBFS.resolver(estado, opcoes),
-        // Substituto temporario da DFS. Ignora o estado de proposito: e um mock.
-        dfs: () => MockResolucao.criarResultadoSucesso("DFS"),
+        // A DFS roda silenciosa: o benchmark mede a busca, e construir um
+        // snapshot de 9x9 por evento distorceria justamente a medicao.
+        dfs: (estado) => DFS.resolver(estado, { silencioso: true }),
     };
 
     const solvers = {};
@@ -98,8 +100,7 @@ rotas.post("/benchmark", (requisicao, resposta) => {
             resumo,
             contemMock,
             avisoMock: contemMock
-                ? "Contem metricas ficticias: a DFS ainda nao foi implementada e foi " +
-                  "substituida por MockResolucao. Nao use estes numeros no relatorio."
+                ? "Contem metricas ficticias (ehMock): nao use estes numeros no relatorio."
                 : null,
             csv: Benchmark.gerarCSV(linhas),
         });

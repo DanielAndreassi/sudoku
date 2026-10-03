@@ -15,7 +15,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import MockResolucao from "../mocks/MockResolucao.js";
+import DFS from "../resolvers/DFS.js";
 import GBFS from "../resolvers/GBFS.js";
 import Benchmark from "../servicos/Benchmark.js";
 import {
@@ -35,10 +35,11 @@ const PADROES = {
 /**
  * Catalogo de solvers injetaveis.
  *
- * `dfs` ainda NAO existe: a Pessoa 1 nao entregou `resolvers/DFS.js`. Enquanto
- * isso, o lugar dele e ocupado por `MockResolucao`, cujas metricas carregam
- * `ehMock: true`. E esse campo que faz o motor emitir o aviso no topo do CSV e
- * este CLI encher o terminal de alerta.
+ * Os dois sao reais e cumprem o mesmo contrato. A DFS e cega: ela varre
+ * milhares de ramos e nao tem como ser resumida por heuristica, entao o
+ * padrao de repeticoes deste CLI (5) a torna o gargalo do benchmark. Os numeros
+ * sao reais e o aviso de `ehMock` so apareceria se alguem reintroduzisse um
+ * mock neste catalogo.
  */
 const CATALOGO_DE_SOLVERS = {
     gbfs: {
@@ -46,9 +47,8 @@ const CATALOGO_DE_SOLVERS = {
         executar: (estado, opcoes) => GBFS.resolver(estado, opcoes),
     },
     dfs: {
-        descricao:
-            "MOCK (mocks/MockResolucao.js) - resolvers/DFS.js ainda nao existe",
-        executar: () => MockResolucao.criarResultadoSucesso("DFS"),
+        descricao: "DFS cega real (resolvers/DFS.js)",
+        executar: (estado) => DFS.resolver(estado, { silencioso: true }),
     },
 };
 
@@ -105,9 +105,12 @@ function textoDeAjuda() {
         "    node bin/benchmark.js --puzzles=facil --repeticoes=3 --saida=/tmp/bench.csv",
         "    node bin/benchmark.js --algoritmos=gbfs --repeticoes=10",
         "",
-        "ATENCAO",
-        "    Enquanto a DFS real nao existir, os numeros dela vem de MockResolucao e",
-        "    sao ficticios. Nao vao para o relatorio.",
+        "TEMPO",
+        "    Os dois solvers rodam silenciosos: o que e medido e a busca, e nao a",
+        "    construcao de milhares de snapshots para a animacao.",
+        "    A DFS e cega e nao tem como ser resumida por heuristica, entao em",
+        "    puzzles com muitos becos ela domina o tempo total. Ver",
+        "    `docs/07_ENTREGA_PESSOA_1_DFS_E_VALIDACAO.md` para os numeros medidos.",
     ].join("\n");
 }
 
@@ -327,7 +330,7 @@ function imprimirAvisoDeMock(resumo, posicao) {
         `ATENCAO - NUMEROS FICTICIOS NA TABELA (aviso ${posicao} da tabela)`,
         [
             `Os algoritmos ${algoritmos.join(", ")} NAO foram medidos de verdade.`,
-            "Os valores vem de mocks/MockResolucao.js: sao constantes inventadas,",
+            "Os valores vem de mocks de resolucao: sao constantes inventadas,",
             "escritas a mao para destravar o desenvolvimento da interface.",
             "",
             "Isso significa que tempo, estados explorados, gerados, backtracks e",

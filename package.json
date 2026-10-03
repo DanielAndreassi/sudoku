@@ -12,6 +12,8 @@
         "start": "nodemon index.js",
         "test:base": "node --test tests/base.test.js",
         "test:gbfs": "node --test tests/gbfs.test.js",
+        "test:dfs": "node --test tests/dfs.test.js",
+        "test:validacao": "node --test tests/validacao.test.js",
         "test:ui": "node --test tests/controlador.test.js tests/player.test.js tests/comparacao.test.js tests/benchmark.test.js tests/gerador.test.js",
         "benchmark": "node bin/benchmark.js"
     },
