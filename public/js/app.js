@@ -24,6 +24,7 @@ const controleProgresso = elemento("controle-progresso");
 
 const botoes = {
     resolver: elemento("botao-resolver"),
+    resolverSilencioso: elemento("botao-resolver-silencioso"),
     limpar: elemento("botao-limpar"),
     solucao: elemento("botao-solucao"),
     reproduzir: elemento("botao-reproduzir"),
@@ -256,23 +257,34 @@ const painel = new Painel({
 
 // ---------------------------------------------------------------------- api
 
+/**
+ * Codigos de validacao que o usuario NAO consegue corrigir editando o tabuleiro.
+ *
+ * `UNSOLVABLE` e `LIMITE_DE_BUSCA` sao propriedades do puzzle, nao erro de
+ * digitacao, e nenhum dos dois aponta celula culpada. Pintar essas duas em
+ * vermelho junto com as duplicatas faria o usuario procurar um erro que nao
+ * existe.
+ */
+const CODIGOS_NAO_CORRIGIVEIS = new Set(["UNSOLVABLE", "LIMITE_DE_BUSCA"]);
+
+let ultimoCodigoDeValidacao = null;
+
 const api = {
-    async resolver({ algoritmo, quadro }) {
+    async resolver({ algoritmo, quadro, silencioso }) {
         const resposta = await fetch("/api/resolver", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ algoritmo, quadro }),
+            body: JSON.stringify({ algoritmo, quadro, silencioso: silencioso === true }),
         });
 
         const corpo = await resposta.json();
 
         if (!resposta.ok) {
+            ultimoCodigoDeValidacao = corpo.validacao?.codigo ?? null;
             return { ok: false, ...corpo };
         }
 
-        notaValidacao.textContent = corpo.avisoValidacao ?? "";
-        notaValidacao.className = corpo.avisoValidacao ? "nota aviso" : "nota";
-
+        ultimoCodigoDeValidacao = null;
         return { ok: true, resultado: corpo.resultado };
     },
 };
@@ -284,6 +296,26 @@ const controlador = new Controlador({
     api,
     gerarChave,
     aoMudar: (instantaneo) => pintarControles(instantaneo),
+    // Um frame de respiro para o navegador pintar "Validando entrada..." antes
+    // de a thread congelar na validacao (~540 ms no puzzle dificil).
+    //
+    // O timeout NAO e redundante. Em aba oculta o navegador nao agenda frames,
+    // entao um requestAnimationFrame sozinho nunca dispara e o `await` desta
+    // promessa trava o controlador em VALIDANDO para sempre — botao Resolver
+    // desabilitado, sem recuperacao. Basta trocar de aba ao clicar em Resolver.
+    // Em aba oculta tambem nao ha nada para pintar, entao perder o frame e
+    // exatamente o comportamento certo.
+    cederControle: () =>
+        new Promise((resolve) => {
+            const alarme = setTimeout(terminar, 50);
+            const quadro = requestAnimationFrame(terminar);
+
+            function terminar() {
+                clearTimeout(alarme);
+                cancelAnimationFrame(quadro);
+                resolve();
+            }
+        }),
 });
 
 // ------------------------------------------------------------------ pintura
@@ -293,8 +325,11 @@ function pintarControles(foto) {
     painelEstado.className = `estado-execucao ${tomDoEstado(foto.estado)}`;
 
     botoes.resolver.disabled = !foto.podeResolver;
+    botoes.resolverSilencioso.disabled = !foto.podeResolver;
     botoes.limpar.disabled = foto.ocupado;
-    botoes.solucao.disabled = !foto.temAnimacao;
+    // Depende de existir solucao, nao de existir animacao: uma busca cancelled
+    // tem eventos e nao tem solucao; uma silenciosa tem solucao e nao tem eventos.
+    botoes.solucao.disabled = !foto.temSolucao;
     botoes.reproduzir.disabled = !foto.podeReproduzir;
     botoes.pausar.disabled = !foto.podePausar;
     botoes.passo.disabled = !foto.podePassar;
@@ -310,7 +345,7 @@ function pintarControles(foto) {
 
 function tomDoEstado(estado) {
     if (estado === ESTADOS.ERRO) {
-        return "falha";
+        return CODIGOS_NAO_CORRIGIVEIS.has(ultimoCodigoDeValidacao) ? "atencao" : "falha";
     }
 
     if (estado === ESTADOS.VALIDANDO || estado === ESTADOS.RESOLVENDO || estado === ESTADOS.REPRODUZINDO) {
@@ -345,10 +380,19 @@ function atualizarProgresso(indice, total) {
 
 // ------------------------------------------------------------------ eventos
 
-botoes.resolver.addEventListener("click", () => {
+async function executar({ silencioso }) {
     limparExplicacao();
-    controlador.resolver(seletorAlgoritmo.value);
-});
+    await controlador.resolver(seletorAlgoritmo.value, { silencioso });
+
+    // Sem eventos nao ha o que animar: mostra o resultado final de uma vez,
+    // senao o tabuleiro ficaria exibindo a entrada como se nada tivesse corrido.
+    if (!controlador.temAnimacao && controlador.temSolucao) {
+        controlador.mostrarSolucao();
+    }
+}
+
+botoes.resolver.addEventListener("click", () => executar({ silencioso: false }));
+botoes.resolverSilencioso.addEventListener("click", () => executar({ silencioso: true }));
 
 botoes.limpar.addEventListener("click", () => {
     controlador.limpar();

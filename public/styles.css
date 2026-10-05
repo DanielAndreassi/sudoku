@@ -335,6 +335,18 @@ select:disabled {
 .estado-execucao.trabalhando { border-left-color: var(--busca); }
 .estado-execucao.falha { border-left-color: var(--perigo); }
 
+/*
+ * Recusa que NAO e erro de digitacao.
+ *
+ * `UNSOLVABLE` e `LIMITE_DE_BUSCA` sao propriedades do puzzle, nao algo que o
+ * usuario possa corrigir apagando uma celula. Vermelho com celulas acesas diz
+ * "voce errou"; ambar sem celula acesa diz "o tabuleiro e assim".
+ */
+.estado-execucao.atencao {
+    border-left-color: var(--alerta);
+    color: var(--alerta);
+}
+
 /* ------------------------------------------------------------------- abas */
 
 .abas {

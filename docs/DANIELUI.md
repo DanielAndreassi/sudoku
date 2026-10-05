@@ -30,10 +30,10 @@ node bin/benchmark.js --algoritmos=gbfs
 | P3-01 | Tabuleiro 9×9, entrada manual, estados visuais | Concluída |
 | P3-02 | Controlador de execução (máquina de estados) | Concluída |
 | P3-03 | Player de eventos com pausa, passo, velocidade, progresso | Concluída |
-| P3-04 | Painel de métricas e comparação DFS × GBFS | Concluída (coluna DFS depende da Pessoa 1) |
+| P3-04 | Painel de métricas e comparação DFS × GBFS | Concluída |
 | P3-05 | Runner de benchmark (motor + CLI + rota) | Concluída |
-| P3-06 | Integração real | **Bloqueada** — ver seção 8 |
-| P3-07 | Testes ponta a ponta | Parcial — ver seção 7 |
+| P3-06 | Integração real | Concluída — DFS e validação reais da Pessoa 1 conectadas |
+| P3-07 | Testes ponta a ponta | 15/15 cenários cobertos — ver seção 7 |
 
 ---
 
@@ -129,13 +129,15 @@ A DFS, seguindo o pseudocódigo do doc 02 (P1-01), vai detectar o beco sem saíd
 
 ### 4.5 Marcação de números fictícios
 
-A DFS ainda não existe. Onde é preciso ter duas colunas (painel de comparação e benchmark), usa-se `MockResolucao`, cujas métricas carregam `ehMock: true`. Essa marca é propagada e exibida de forma deliberadamente incômoda:
+Enquanto a DFS não existia, o painel e o benchmark preenchiam a segunda coluna com `MockResolucao`, cujas métricas carregam `ehMock: true`. **Hoje nenhum caminho usa mock:** `routes/resolver.js`, `routes/utilidades.js` e `bin/benchmark.js` chamam as duas implementações reais.
 
-- no painel, aviso em destaque acima da tabela nomeando quais algoritmos vieram de mock;
+A marcação ficou no lugar de propósito, como rede permanente. Ela não pergunta quem preencheu a métrica, só olha a flag — então se alguém reintroduzir um mock em qualquer catálogo de solvers, o aviso reaparece sozinho:
+
+- no painel, destaque acima da tabela nomeando quais algoritmos vieram de mock;
 - no CLI, dois blocos de moldura (antes e depois da tabela), sufixo ` [MOCK]` no nome do algoritmo e coluna `alertas` com `FICTICIO`;
 - no CSV, uma linha de comentário no topo do arquivo, antes do cabeçalho.
 
-O motivo: tabela de benchmark é exatamente o artefato que alguém copia para o relatório sem conferir a procedência. Vale registrar uma limitação adicional do mock — `criarResultadoSucesso("DFS")` devolve `status: "solved"` independentemente do puzzle, então rodando o caso insolúvel o GBFS reporta `unsolvable` corretamente e a linha da DFS reporta `solved`. É mais uma razão para essas linhas não servirem para nada além de exercitar a interface.
+O motivo de ter sido construído assim: tabela de benchmark é exatamente o artefato que alguém copia para o relatório sem conferir a procedência.
 
 ### 4.6 Redesign visual — tema escuro de painel de dados
 
@@ -195,6 +197,42 @@ Os níveis (35/45/55 células removidas) vêm acompanhados de um aviso que viaja
 
 ---
 
+### 4.10 Execução interrompida e o botão "Sem animação"
+
+A DFS instrumentada no puzzle difícil estoura o teto de 60.000 eventos da Pessoa 1 e devolve `status: "cancelled"` — sem esse teto, a resposta passaria de 200 MB. Medido:
+
+| Modo | Status | Eventos | Explorados | Backtracks |
+| --- | --- | --- | --- | --- |
+| instrumentado | `cancelled` | 60.000 | 7.818 | 7.786 |
+| silencioso | `solved` | 0 | 14.356 | 14.295 |
+
+A interface não podia simplesmente dizer "cancelled" e mostrar um tabuleiro pela metade. Duas respostas:
+
+1. **Botão "Sem animação"**, ao lado de Resolver, sempre disponível — manda `silencioso: true`, a busca roda inteira sem gravar evento, e as métricas reais chegam. É o que o doc 04 (P3-05) chama de medição honesta, e serve para qualquer caso em que se quer o número sem esperar a animação, não só como conserto do `cancelled`.
+2. **Execução `cancelled` não entra na comparação.** Ela mediu "os primeiros 60 mil eventos", não o problema inteiro; colocá-la ao lado de uma busca concluída convida a mesma leitura errada que a convenção da seção 4.4 existe para impedir. A mensagem diz isso e aponta o botão.
+
+"Ver solução" passou a depender de existir `solucao`, não de existir animação: uma busca `cancelled` tem eventos e não tem solução, uma silenciosa tem solução e não tem eventos. São condições diferentes.
+
+### 4.11 Dois tons para recusa de entrada
+
+A validação da Pessoa 1 devolve cinco códigos, e eles não são a mesma coisa:
+
+| Código | Natureza | Tratamento |
+| --- | --- | --- |
+| `DUPLICATE_ROW` / `_COLUMN` / `_BLOCK` | erro de digitação | vermelho, células acesas |
+| `ZERO_DOMAIN` | erro de digitação | vermelho, células acesas |
+| `UNSOLVABLE` | propriedade do puzzle | âmbar, sem célula acesa |
+| `LIMITE_DE_BUSCA` | não deu para provar | âmbar, sem célula acesa |
+| `INVALID_STRUCTURE` | matriz malformada | vermelho (não ocorre pela UI) |
+
+A distinção que importa para quem olha é "eu errei" contra "esse tabuleiro é assim". Pintar `UNSOLVABLE` de vermelho junto com as duplicatas faria o usuário procurar um erro de digitação que não existe. O texto exato continua vindo da `mensagem` da Pessoa 1; a interface só escolhe o tom.
+
+### 4.12 Validar custa caro, e a tela precisa dizer isso
+
+`Validacao.validarQuadroInicial` roda uma DFS silenciosa para provar que existe solução — é o requisito do doc 00 §12.4. No puzzle difícil isso custa cerca de 540 ms, pagos em **toda** requisição, antes de a busca principal começar.
+
+O controlador já passava por `VALIDANDO` antes de `RESOLVENDO`, mas as duas transições aconteciam no mesmo tick, então o navegador nunca pintava a primeira: o usuário via "Resolvendo…" e meio segundo de tela imóvel. Entrou um ponto de cessão de controle entre os dois estados, **injetado no construtor** (`cederControle`), com padrão de um frame no navegador e resolução imediata nos testes — caso contrário `tests/controlador.test.js` passaria a depender de `requestAnimationFrame`, que não existe no Node.
+
 ## 5. Medições
 
 Todas com os casos fixos de `tests/casosBase.js`, GBFS real.
@@ -219,32 +257,32 @@ Benchmark completo (3 puzzles × 2 algoritmos × 5 repetições, um deles mock):
 
 ---
 
-## 6. Contrato que a Pessoa 1 precisa cumprir
+## 6. Contrato com a Pessoa 1 — cumprido
 
-O controlador escolhe o resolvedor pelo nome, por injeção. Para conectar a DFS real, basta que ela cumpra a mesma assinatura que o GBFS já cumpre:
+A trilha da Pessoa 1 foi entregue (`docs/07_ENTREGA_PESSOA_1_DFS_E_VALIDACAO.md`) e respeita o contrato combinado em `docs/PESSOA1_DESCRICAO.md`:
 
 ```js
-// resolvers/DFS.js
-DFS.resolver(estadoInicial, opcoes) -> ResultadoResolucao
-//   estadoInicial: SudokuEstado
-//   opcoes.silencioso === true  =>  sem eventos, métricas mantidas
-
-// validacao/Validacao.js (ou onde a Pessoa 1 preferir)
-Validacao.validarQuadroInicial(matriz9x9) -> ResultadoValidacao
+DFS.resolver(estadoInicial, opcoes)        -> ResultadoResolucao
+Validacao.validarQuadroInicial(matriz9x9)  -> ResultadoValidacao
 ```
 
-A validação recebe a **matriz crua**, não um `SudokuEstado`, porque precisa validar a estrutura antes de existir estado válido — instanciar `SudokuEstado` com uma matriz malformada é justamente o que a validação estrutural existe para impedir.
+Os quatro pontos de conexão estão ligados, e foi a própria Pessoa 1 que os trocou:
 
-Pontos de troca, uma linha cada:
+| Arquivo | Estado |
+| ------- | ------ |
+| `routes/resolver.js` → `RESOLVEDORES.dfs` | `DFS.resolver` real |
+| `routes/resolver.js` → validação | `Validacao.validarQuadroInicial`; a guarda provisória foi removida |
+| `routes/utilidades.js` → `todosSolvers.dfs` | `DFS.resolver` real |
+| `bin/benchmark.js` → catálogo | `DFS.resolver` real |
 
-| Arquivo | Linha a trocar |
-| ------- | -------------- |
-| `routes/resolver.js` | `RESOLVEDORES.dfs`, hoje `null` |
-| `routes/resolver.js` | `validarEntradaProvisoria`, substituir pela chamada real |
-| `routes/utilidades.js` | `todosSolvers.dfs`, hoje `MockResolucao` |
-| `bin/benchmark.js` | `CATALOGO_DE_SOLVERS.dfs`, hoje `MockResolucao` |
+Duas coisas que ela entregou além do combinado e que a interface precisou absorver:
 
-**Sobre a validação provisória:** `routes/resolver.js` tem uma guarda mínima que recusa matriz malformada e duplicatas usando apenas o que a BASE-V1 já oferece (`SudokuEstado.estaValido()`). Ela **não** detecta domínio zero nem insolubilidade global, porque isso exige a busca silenciosa do P1-04. Consequência observável hoje: o caso `dominioZero` passa pela guarda e devolve HTTP 200 com `status: "unsolvable"` — a própria busca descobre, em vez de a validação barrar antes. A guarda existe só para o servidor não estourar dentro do solver, e some quando a Pessoa 1 entregar.
+- **`status: "cancelled"`** e um teto de eventos — tratados na seção 4.10.
+- **`LIMITE_DE_BUSCA`**, um quinto código de validação que não estava no contrato original — tratado na seção 4.11.
+
+A convenção de métricas aprovada pelo grupo (seção 4.4) foi respeitada: `fronteiraMaxima` na DFS carrega a profundidade máxima da pilha de recursão, e `estadosPodados` fica sempre em 0, por construção de uma busca cega.
+
+O `erro`, sétimo estado visual da grade, deixou de ser inalcançável: a validação devolve `celulas` para `DUPLICATE_*` e `ZERO_DOMAIN`, e as coordenadas acendem sem nenhuma alteração adicional no cliente.
 
 ---
 
@@ -254,21 +292,21 @@ Verificado no navegador, em `http://localhost:8080`, com o console aberto.
 
 | # | Cenário | Situação |
 | - | ------- | -------- |
-| 1 | Digitar puzzle válido e resolver com DFS | **Bloqueado** — DFS não existe; seletor devolve HTTP 501 com mensagem clara |
+| 1 | Digitar puzzle válido e resolver com DFS | OK — `solved`, 334 explorados, 2.500 eventos no fácil |
 | 2 | Resolver o mesmo puzzle com GBFS | OK — solved, 259 eventos, 52 explorados |
 | 3 | Pausar animação | OK — índice congela e não avança sozinho |
 | 4 | Avançar passo a passo | OK — um evento por clique, confirmado nos 5 primeiros |
 | 5 | Mudar velocidade | OK — controle aplica sem parar a reprodução |
-| 6 | Verificar backtracking da DFS | **Bloqueado** |
+| 6 | Verificar backtracking da DFS | OK — 282 eventos `BACKTRACK` no fácil, com `razao: RAMA_SEM_SOLUCAO` |
 | 7 | Ver MRV / Degree / LCV / h no GBFS | OK — MRV = 1, Degree = 11, LCV com impacto, h = 62.444 |
-| 8 | Duplicata em linha | Parcial — HTTP 422 e mensagem clara, mas **sem células destacadas**; ver abaixo |
-| 9 | Duplicata em coluna | OK — HTTP 422, `INVALID_RULES` |
-| 10 | Duplicata em bloco 3×3 | OK — HTTP 422, `INVALID_RULES` |
-| 11 | Puzzle insolúvel | OK — `status: unsolvable` |
+| 8 | Duplicata em linha | OK — HTTP 422, `DUPLICATE_ROW`, 2 células acesas em vermelho |
+| 9 | Duplicata em coluna | OK — HTTP 422, `DUPLICATE_COLUMN` |
+| 10 | Duplicata em bloco 3×3 | OK — HTTP 422, `DUPLICATE_BLOCK` |
+| 11 | Puzzle insolúvel | OK — HTTP 422, `UNSOLVABLE`, em âmbar e sem célula acesa |
 | 12 | Limpar tabuleiro | OK |
 | 13 | Benchmark silencioso | OK — CLI roda, imprime tabela, grava CSV |
 | 14 | Comparação usa o mesmo estado inicial | OK — trocar de puzzle reinicia a comparação |
-| 15 | Solução final válida | Parcial — GBFS confirmado (tabuleiro completo, 51 células preenchidas pela busca); DFS bloqueada |
+| 15 | Solução final válida | OK — DFS e GBFS resolvem o fácil, as duas soluções são válidas e idênticas |
 
 Refeito integralmente no navegador **depois** do redesign visual (seção 4.6), com o console aberto: zero erros de JavaScript em todo o percurso. Também conferido: troca de abas; o painel explicativo passou a mostrar 5 linhas em `SEARCH_STARTED` (era 12, com 7 traços) e 10 em `CELL_SELECTED`; a barra de progresso salta corretamente dentro dos 43.067 eventos do difícil; `completoValido` devolve `solved`; o gerador produz 45 lacunas no nível médio com o aviso de unicidade.
 
@@ -313,19 +351,21 @@ Vale registrar como argumento a favor do checklist manual: nenhum dos 95 testes 
 
 **Marca de solução apagada no último evento.** `SEARCH_FINISHED` chega depois de `SOLUTION_FOUND` carregando o mesmo snapshot; ao renderizá-lo, as marcas de solução recém-pintadas eram limpas e a animação terminava sem destaque. Corrigido tratando os dois eventos juntos.
 
+**Deadlock em aba oculta.** A cessão de controle da seção 4.12 usava `requestAnimationFrame` sozinho. Em aba de segundo plano o navegador não agenda frames, então o `await` nunca resolvia e o controlador ficava preso em `VALIDANDO` para sempre — botão Resolver desabilitado, sem recuperação possível. Bastava trocar de aba ao clicar em Resolver. Medido na página: `visibilityState: "hidden"`, `rAF` não dispara em 2 s, estado congelado. Corrigido fazendo o `rAF` correr contra um `setTimeout` de 50 ms; em aba oculta não há nada para pintar, então perder o frame é o comportamento certo.
+
+**Tabuleiro animado reusado como entrada.** `resolver()` lê o tabuleiro da tela. Depois de reproduzir uma animação, a tela mostra um estado *intermediário* da busca, não o puzzle — e a próxima execução recebia isso como entrada. Observado na prática: animar a DFS até o primeiro `BACKTRACK` e então rodar o GBFS devolvia "não tem solução possível" num puzzle fácil, porque o estado congelado no meio de um retrocesso é de fato insolúvel.
+
+Isso quebrava a garantia central da comparação, o doc 00 §14.2: os dois algoritmos precisam receber cópias do **mesmo** estado inicial. A chave de 81 caracteres (seção 4.7) detectava a divergência e reiniciava a comparação, mas o comportamento de origem estava errado. Corrigido restaurando as pistas congeladas antes de reler o tabuleiro, quando há animação carregada. Coberto por `P3-04 animar e depois resolver de novo NAO usa o tabuleiro animado`.
+
 **Fixture de teste compartilhada por referência.** `servicos/PuzzlesFixos.js` devolvia as matrizes de `tests/casosBase.js` por referência. Um solver que mutasse a entrada corromperia a fixture usada pelos testes das outras trilhas, e o sintoma apareceria muito longe da causa. Passou a devolver cópias.
 
 ---
 
 ## 9. O que falta
 
-Dependente da **Pessoa 1** (P1-01 a P1-05):
+Nada bloqueado, nada pendente de verificação. A passagem completa foi refeita no navegador após a integração com a Pessoa 1: **137 testes automatizados** e os 15 cenários do checklist, com zero erros de console.
 
-- DFS real conectada ao seletor de algoritmo;
-- validação completa substituindo a guarda provisória;
-- coluna DFS do painel de comparação com dados verdadeiros;
-- linhas de DFS do benchmark deixando de ser fictícias;
-- cenários 1, 6 e 15 do checklist.
+Confirmado na tela nesta última rodada: os dois tons de recusa (duplicata em vermelho com 2 células acesas; insolúvel em âmbar `rgb(251,191,36)` sem célula acesa); o `cancelled` do difícil com mensagem explicativa, "Ver solução" desabilitado e comparação não registrada; o botão "Sem animação" convertendo esse mesmo caso em `solved` com 14.356 estados explorados; o primeiro `BACKTRACK` da DFS no passo 62 do fácil; e a comparação DFS × GBFS completa sobre o mesmo puzzle.
 
 Melhorias possíveis, não exigidas pelo documento:
 

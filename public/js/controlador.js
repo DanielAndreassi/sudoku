@@ -35,13 +35,25 @@ export default class Controlador {
     #algoritmoAtual = null;
     #mensagem = "";
 
-    constructor({ tabuleiro, player, painel, api, gerarChave, aoMudar = () => {} }) {
+    constructor({
+        tabuleiro,
+        player,
+        painel,
+        api,
+        gerarChave,
+        aoMudar = () => {},
+        // Devolve o controle ao navegador para ele pintar antes de a thread
+        // congelar. Injetado porque `requestAnimationFrame` nao existe no Node,
+        // e `tests/controlador.test.js` roda sem DOM.
+        cederControle = () => Promise.resolve(),
+    }) {
         this.tabuleiro = tabuleiro;
         this.player = player;
         this.painel = painel;
         this.api = api;
         this.gerarChave = gerarChave;
         this.aoMudar = aoMudar;
+        this.cederControle = cederControle;
     }
 
     get estado() {
@@ -73,6 +85,17 @@ export default class Controlador {
         return this.#resultado !== null && this.#resultado.eventos.length > 0;
     }
 
+    /**
+     * Ha solucao final para exibir.
+     *
+     * Separado de `temAnimacao` de proposito: uma busca `cancelled` tem eventos
+     * mas nao tem solucao, e uma busca silenciosa tem solucao mas nao tem
+     * eventos. Os dois botoes dependem de coisas diferentes.
+     */
+    get temSolucao() {
+        return Boolean(this.#resultado?.solucao);
+    }
+
     #transitar(estado, mensagem = "") {
         this.#estado = estado;
         this.#mensagem = mensagem;
@@ -88,6 +111,7 @@ export default class Controlador {
             chavePuzzle: this.#chavePuzzle,
             ocupado: this.ocupado,
             temAnimacao: this.temAnimacao,
+            temSolucao: this.temSolucao,
             podeResolver: !this.ocupado,
             podeEditar: !this.ocupado,
             podeReproduzir: this.temAnimacao && this.#estado !== ESTADOS.REPRODUZINDO,
@@ -134,11 +158,26 @@ export default class Controlador {
      * Fluxo do P3-02: le o tabuleiro, trava a edicao, valida, e so entao chama o
      * resolvedor. Entrada invalida NUNCA chega ao solver.
      */
-    async resolver(algoritmo) {
+    async resolver(algoritmo, { silencioso = false } = {}) {
         // Guarda contra duplo clique e contra iniciar busca durante reproducao.
         // Criterio de aceite explicito do doc 04 P3-02.
         if (this.ocupado) {
             return false;
+        }
+
+        // A animacao escreve os valores da busca nas celulas. Se uma execucao
+        // anterior foi reproduzida, o que esta na tela e um estado INTERMEDIARIO
+        // da busca, nao o puzzle — e ler isso como entrada daria ao proximo
+        // algoritmo um problema diferente, quebrando a garantia do doc 00 §14.2
+        // (os dois recebem copias do mesmo estado inicial). Observado na pratica:
+        // animar a DFS e depois rodar o GBFS devolvia "sem solucao" num puzzle
+        // facil, porque o estado congelado no meio de um backtrack e de fato
+        // insoluvel.
+        //
+        // `resetar()` devolve o tabuleiro as pistas congeladas no inicio da
+        // execucao anterior, que e o puzzle de verdade.
+        if (this.temAnimacao) {
+            this.tabuleiro.resetar();
         }
 
         const quadro = this.tabuleiro.lerQuadro();
@@ -154,8 +193,20 @@ export default class Controlador {
         let resposta;
 
         try {
-            this.#transitar(ESTADOS.RESOLVENDO, `Resolvendo com ${algoritmo.toUpperCase()}...`);
-            resposta = await this.api.resolver({ algoritmo, quadro });
+            // Sem esta cessao, VALIDANDO e RESOLVENDO acontecem no mesmo tick e o
+            // navegador nunca pinta o primeiro. Importa de verdade: validar o
+            // puzzle dificil custa ~540 ms (a validacao roda uma DFS silenciosa
+            // para provar que existe solucao), e sem isso o usuario encara meio
+            // segundo de tela parada sem saber que algo esta acontecendo.
+            await this.cederControle();
+
+            this.#transitar(
+                ESTADOS.RESOLVENDO,
+                silencioso
+                    ? `Resolvendo com ${algoritmo.toUpperCase()} sem animacao...`
+                    : `Resolvendo com ${algoritmo.toUpperCase()}...`,
+            );
+            resposta = await this.api.resolver({ algoritmo, quadro, silencioso });
         } catch (erro) {
             this.tabuleiro.bloquearEdicao(false);
             this.#transitar(ESTADOS.ERRO, `Falha de comunicacao: ${erro.message}`);
@@ -182,22 +233,50 @@ export default class Controlador {
         this.#chavePuzzle = chave;
 
         this.painel?.mostrarExecucao(algoritmo, resultado);
-        this.painel?.registrarParaComparacao(chave, algoritmo, resultado);
-        this.painel?.renderizarComparacao();
+
+        // So execucao concluida entra na comparacao.
+        //
+        // Uma busca `cancelled` parou no teto de eventos: ela mediu "os
+        // primeiros 60 mil eventos", nao o problema inteiro. Coloca-la ao lado
+        // de uma busca `solved` na mesma tabela convida exatamente a leitura
+        // errada que a convencao de metricas existe para impedir. Mesma regra
+        // que ja descarta a comparacao quando o tabuleiro muda.
+        if (resultado.status === "solved") {
+            this.painel?.registrarParaComparacao(chave, algoritmo, resultado);
+            this.painel?.renderizarComparacao();
+        }
 
         this.player?.definirEventos(resultado.eventos);
 
-        if (resultado.status === "solved") {
-            this.#transitar(
-                ESTADOS.PRONTO,
-                `Resolvido em ${resultado.metricas.tempo.toFixed(1)} ms. ` +
-                `${resultado.eventos.length.toLocaleString("pt-BR")} eventos gravados.`,
-            );
-        } else {
-            this.#transitar(ESTADOS.PRONTO, `Busca encerrada: ${resultado.status}.`);
-        }
+        this.#transitar(ESTADOS.PRONTO, this.#descreverResultado(resultado, silencioso));
 
         return true;
+    }
+
+    #descreverResultado(resultado, silencioso) {
+        const ms = resultado.metricas?.tempo?.toFixed(1) ?? "?";
+        const eventos = resultado.eventos.length;
+
+        if (resultado.status === "solved") {
+            return silencioso || eventos === 0
+                ? `Resolvido em ${ms} ms, sem animacao. Metricas abaixo.`
+                : `Resolvido em ${ms} ms. ${eventos.toLocaleString("pt-BR")} eventos gravados.`;
+        }
+
+        if (resultado.status === "cancelled") {
+            return (
+                `Busca interrompida apos ${eventos.toLocaleString("pt-BR")} eventos ` +
+                "(teto de instrumentacao). O tabuleiro mostra ate onde ela chegou. " +
+                "Use \"Resolver sem animacao\" para medir a busca completa; " +
+                "esta execucao nao entra na comparacao."
+            );
+        }
+
+        if (resultado.status === "unsolvable") {
+            return "A busca esgotou todos os ramos: este tabuleiro nao tem solucao.";
+        }
+
+        return `Busca encerrada: ${resultado.status}.`;
     }
 
     /** Mostra a solucao final sem reproduzir a animacao. */

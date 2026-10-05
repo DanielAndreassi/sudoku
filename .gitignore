@@ -1,3 +1,7 @@
 node_modules
-benchmark.csv
-*.csv
+
+# Saida transitoria do benchmark na raiz (gerada a cada `npm run benchmark`).
+# Os CSV datados de docs/ SAO versionados: eles sustentam as tabelas do
+# relatorio e precisam ser auditaveis.
+/benchmark.csv
+/validacao.csv
